@@ -20,7 +20,7 @@
 
 #include "platform.h"
 
-#define XLEN_MAX (255 + 16*255 + 16*64*255 + 16*64*128*255 + 16*64*128*127*255U)
+#define XLEN_MAX (255 + 16*255 + 16*32*255 + 16*32*127*65535U)
 
 static inline uint32_t getxlen(const uchar **pp)
 {
@@ -28,16 +28,12 @@ static inline uint32_t getxlen(const uchar **pp)
     if (unlikely(len >= 256 - 16)) {
 	uint32_t x = *(*pp)++;
 	len += 16 * x;
-	if (unlikely(x >= 256 - 64)) {
+	if (unlikely(x >= 256 - 32)) {
 	    x = *(*pp)++;
-	    len += 16 * 64 * x;
-	    if (unlikely(x >= 256 - 128)) {
-		x = *(*pp)++;
-		len += 16 * 64 * 128 * x;
-		if (unlikely(x >= 256 - 127)) {
-		    x = *(*pp)++;
-		    len += 16 * 64 * 128 * 127 * x;
-		}
+	    len += 16 * 32 * x;
+	    if (unlikely(x >= 256 - 127)) {
+		x = load16le(*pp), *pp += 2;
+		len += 16 * 32 * 127 * x;
 	    }
 	}
     }
@@ -51,21 +47,15 @@ static inline void putxlen(uint32_t len, uchar **pp)
 	uint32_t x = (len - (256 - 16)) / 16;
 	len -= x * 16;
 	n = 2;
-	if (unlikely(x >= 256 - 64)) {
-	    uint32_t y = (x - (256 - 64)) / 64;
-	    x -= y * 64;
+	if (unlikely(x >= 256 - 32)) {
+	    uint32_t y = (x - (256 - 32)) / 32;
+	    x -= y * 32;
 	    n = 3;
-	    if (unlikely(y >= 256 - 128)) {
-		uint32_t z = (y - (256 - 128)) / 128;
-		y -= z * 128;
-		n = 4;
-		if (unlikely(z >= 256 - 127)) {
-		    uint32_t Z = (z - (256 - 127)) / 127;
-		    z -= Z * 127;
-		    n = 5;
-		    (*pp)[4] = Z;
-		}
-		(*pp)[3] = z;
+	    if (unlikely(y >= 256 - 127)) {
+		uint32_t z = (y - (256 - 127)) / 127;
+		y -= z * 127;
+		n = 5;
+		store16le(*pp + 3, z);
 	    }
 	    (*pp)[2] = y;
 	}
