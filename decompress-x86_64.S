@@ -40,6 +40,8 @@
 #define r_srcLast5 r_arg1
 #define r_out0     r_arg2
 #define r_out      r_arg3
+#define r_tok      r_arg4
+#define e_tok      e_arg4
 
 #define L(name) .L##name
 
@@ -48,11 +50,15 @@ FUNC(RELZ4_decompress)
 	mov r_out0,r_out
 	sub $5,r_srcLast5
 
+	movzb (r_src),e_tok
+	add $1,r_src
+	mov e_tok,%eax
+	shr $4,%eax
+
 	.align 16
 L(loop):
-	movzb (r_src),%r10d
-	mov %r10d,%eax
-	shr $4,%eax
+	mov e_tok,%r10d
+	movzb (r_src),e_tok
 	cmp $0xf0,%r10d
 	jae L(bigllen)
 	movups 1(r_src),%xmm0
@@ -73,6 +79,8 @@ L(match):
 	add $2,r_src
 	movzw (%rax),%eax
 	movw %ax,16(r_out)
+	mov e_tok,%eax
+	shr $4,%eax
 	add %r10,r_out
 	add $3,r_out
 	jmp L(loop)
@@ -127,6 +135,8 @@ L(copymloop):
 	cmp %rax,r_out
 	jb L(copymloop)
 	mov %rax,r_out
+	mov e_tok,%eax
+	shr $4,%eax
 	jmp L(loop)
 
 L(bigllen2):
