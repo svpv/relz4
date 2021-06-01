@@ -1,3 +1,4 @@
+#include "relz4.h"
 #include "xlen.h"
 
 static inline uchar *decompress(const uchar *src, size_t srcSize, uchar *out)
