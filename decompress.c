@@ -25,13 +25,13 @@ static inline uchar *decompress(const uchar *src, size_t srcSize, uchar *out)
 	if (unlikely(src > srcLast5))
 	    break;
 	uint moff = load16le(src);
-	mlen &= 15;
 	const uchar *ref = out - moff;
-	if (likely(mlen != 15)) {
+	mlen &= 15;
+	if (likely(mlen != 0)) {
 	    memcpy(out + 0, ref - 16, 16);
 	    src += 2;
 	    memcpy(out + 16, ref + 0, 2);
-	    mlen += 4;
+	    mlen += 3;
 	    out += mlen;
 	}
 	else {

@@ -38,10 +38,9 @@ static inline void putseq(size_t llen, size_t mlen, uint32_t moff,
 	else
 	    assert(mlen >= 4);
 	Src += mlen;
-	*tok |= mlen - 4;
+	*tok |= mlen - 3;
 	return;
     }
-    *tok |= 15;
     assert(mlen < (3U<<30));
     putxlen(mlen - 20, pout);
     Src += mlen;

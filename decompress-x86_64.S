@@ -66,8 +66,7 @@ L(loop):
 L(match):
 	movzw (r_src),%r11d
 	and $15,%r10d
-	cmp $15,%r10d
-	je L(bigmlen)
+	jz L(bigmlen)
 	sub %r11,%rax
 	movups -16(%rax),%xmm0
 	movups %xmm0,(r_out)
@@ -75,7 +74,7 @@ L(match):
 	movzw (%rax),%eax
 	movw %ax,16(r_out)
 	add %r10,r_out
-	add $4,r_out
+	add $3,r_out
 	jmp L(loop)
 
 	.align 16
