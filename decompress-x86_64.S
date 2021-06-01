@@ -70,11 +70,11 @@ L(loop):
 	ja L(break)
 L(match):
 	movzw (r_src),%r11d
-	and $15,%r10d
-	jz L(bigmlen)
 	sub %r11,%rax
 	movups -16(%rax),%xmm0
 	movups %xmm0,(r_out)
+	and $15,%r10d
+	jz L(bigmlen)
 	add $3,r_src
 	movzw (%rax),%eax
 	movw %ax,16(r_out)
@@ -115,12 +115,13 @@ L(copylloop):
 
 	.align 16
 L(bigmlen):
+	add $16,r_out
 	movzb 2(r_src),%eax
 	cmp $240,%eax
 	jae L(bigmlen2)
 	add $4,r_src
 L(gotmlen):
-	add $20,%rax
+	add $20-16,%rax
 	neg %r11
 	add r_out,%rax
 

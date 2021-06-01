@@ -29,17 +29,18 @@ static inline uchar *decompress(const uchar *src, size_t srcSize, uchar *out)
 	uint moff = load16le(src);
 	llen = tok >> 4;
 	const uchar *ref = out - moff;
+	memcpy(out + 0, ref - 16, 16);
 	mlen &= 15;
 	if (likely(mlen != 0)) {
-	    memcpy(out + 0, ref - 16, 16);
 	    src += 3;
 	    memcpy(out + 16, ref + 0, 2);
 	    mlen += 3;
 	    out += mlen;
 	}
 	else {
+	    out += 16, ref += 16;
 	    src += 2;
-	    mlen = 20 + getxlen(&src);
+	    mlen = 20 - 16 + getxlen(&src);
 	    src += 1;
 	    uchar *outEnd = out + mlen;
 	    do {
