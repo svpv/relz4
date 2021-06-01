@@ -51,20 +51,19 @@ FUNC(RELZ4_decompress)
 	sub $5,r_srcLast5
 
 	movzb (r_src),e_tok
-	add $1,r_src
+	add $2,r_src
 	mov e_tok,%eax
 	shr $4,%eax
 
 	.align 16
 L(loop):
 	mov e_tok,%r10d
-	movzb (r_src),e_tok
+	movzb -1(r_src),e_tok
 	cmp $0xf0,%r10d
 	jae L(bigllen)
-	movups 1(r_src),%xmm0
-	add $1,r_src
-	movups %xmm0,(r_out)
+	movups (r_src),%xmm0
 	add %rax,r_src
+	movups %xmm0,(r_out)
 	add %rax,r_out
 	mov r_out,%rax
 	cmp r_srcLast5,r_src
@@ -76,7 +75,7 @@ L(match):
 	sub %r11,%rax
 	movups -16(%rax),%xmm0
 	movups %xmm0,(r_out)
-	add $2,r_src
+	add $3,r_src
 	movzw (%rax),%eax
 	movw %ax,16(r_out)
 	mov e_tok,%eax
@@ -87,10 +86,10 @@ L(match):
 
 	.align 16
 L(bigllen):
-	movzb 1(r_src),%eax
+	movzb (r_src),%eax
 	cmp $240,%eax
 	jae L(bigllen2)
-	add $2,r_src
+	add $1,r_src
 L(gotllen):
 	add $15,%eax
 	add r_out,%rax
@@ -119,7 +118,7 @@ L(bigmlen):
 	movzb 2(r_src),%eax
 	cmp $240,%eax
 	jae L(bigmlen2)
-	add $3,r_src
+	add $4,r_src
 L(gotmlen):
 	add $20,%rax
 	neg %r11
@@ -140,12 +139,12 @@ L(copymloop):
 	jmp L(loop)
 
 L(bigllen2):
-	movzb 2(r_src),%r11d
+	movzb 1(r_src),%r11d
 	shl $4,%r11d
 	add %r11d,%eax
 	cmp $224*16,%r11d
 	jae L(bigllen3)
-	add $3,r_src
+	add $2,r_src
 	jmp L(gotllen)
 L(bigmlen2):
 	movzb 3(r_src),%r10d
@@ -153,16 +152,16 @@ L(bigmlen2):
 	add %r10d,%eax
 	cmp $224*16,%r10d
 	jae L(bigmlen3)
-	add $4,r_src
+	add $5,r_src
 	jmp L(gotmlen)
 
 L(bigllen3):
-	movzb 3(r_src),%r11d
+	movzb 2(r_src),%r11d
 	shl $9,%r11d
 	add %r11d,%eax
 	cmp $129*16*32,%r11d
 	jae L(bigllen4)
-	add $4,r_src
+	add $3,r_src
 	jmp L(gotllen)
 L(bigmlen3):
 	movzb 4(r_src),%r10d
@@ -170,18 +169,18 @@ L(bigmlen3):
 	add %r10d,%eax
 	cmp $129*16*32,%r10d
 	jae L(bigmlen4)
-	add $5,r_src
+	add $6,r_src
 	jmp L(gotmlen)
 
 L(bigllen4):
-	movzw 4(r_src),%r11d
-	add $6,r_src
+	movzw 3(r_src),%r11d
+	add $5,r_src
 	imul $16*32*127,%r11d,%r11d
 	add %r11d,%eax
 	jmp L(gotllen)
 L(bigmlen4):
 	movzw 5(r_src),%r10d
-	add $7,r_src
+	add $8,r_src
 	imul $16*32*127,%r10d,%r10d
 	add %r10d,%eax
 	jmp L(gotmlen)
