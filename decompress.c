@@ -4,10 +4,12 @@
 static inline uchar *decompress(const uchar *src, size_t srcSize, uchar *out)
 {
     const uchar *srcLast5 = src + srcSize - 5;
-    uint llen = *src++;
+    uint tok = *src;
+    uint llen = tok >> 4;
+    src += 2;
     while (1) {
-	uint mlen = llen;
-	llen >>= 4;
+	uint mlen = tok;
+	tok = src[-1];
 	if (likely(mlen < 0xf0)) {
 	    memcpy(out, src, 16);
 	    src += llen, out += llen;
@@ -25,10 +27,10 @@ static inline uchar *decompress(const uchar *src, size_t srcSize, uchar *out)
 	if (unlikely(src > srcLast5))
 	    break;
 	uint moff = load16le(src);
+	llen = tok >> 4;
 	const uchar *ref = out - moff;
 	mlen &= 15;
 	if (likely(mlen != 0)) {
-	    llen = src[2];
 	    memcpy(out + 0, ref - 16, 16);
 	    src += 3;
 	    memcpy(out + 16, ref + 0, 2);
@@ -38,7 +40,7 @@ static inline uchar *decompress(const uchar *src, size_t srcSize, uchar *out)
 	else {
 	    src += 2;
 	    mlen = 20 + getxlen(&src);
-	    llen = *src++;
+	    src += 1;
 	    uchar *outEnd = out + mlen;
 	    do {
 		memcpy(out + 0, ref - 16, 16);

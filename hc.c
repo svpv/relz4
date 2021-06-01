@@ -92,6 +92,7 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
     const uchar *srcEnd = src + srcSize;
     const uchar *last12 = srcEnd - 12;
     const uchar *mstart, *mstart0, *mstart2;
+    uchar *puttok = NULL;
     uint32_t moff, moff0, moff2;
     uint32_t mlen, mlen0, mlen2;
     src += MINOFF;
@@ -112,7 +113,7 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
 	    mlen2 = HC_find(&hc, src0, src, last12, &mstart2, &moff2, maxiter);
 	}
 	if (mlen2 <= mlen) {
-	    putseq(mstart - src0, mlen, moff, &src0, &out);
+	    putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
 	    src = src0;
 	    continue;
 	}
@@ -129,7 +130,7 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
 	    goto search2;
 	}
 	if (mstart2 >= mstart + mlen) {
-	    putseq(mstart - src0, mlen, moff, &src0, &out);
+	    putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
 	    mstart = mstart2, moff = moff2, mlen = mlen2;
 	    goto save1;
 	}
@@ -145,11 +146,11 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
 	}
 	if (mstart2 < mstart + mlen)
 	    mlen = mstart2 - mstart;
-	putseq(mstart - src0, mlen, moff, &src0, &out);
+	putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
 	mstart = mstart2, moff = moff2, mlen = mlen2;
 	goto save1;
     }
-    putlastseq(srcEnd - src0, &src0, &out);
+    putlastseq(srcEnd - src0, &src0, &out, &puttok);
     return out;
 }
 

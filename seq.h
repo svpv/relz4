@@ -6,9 +6,12 @@
 #define Out (*pout)
 
 static inline void putseq(size_t llen, size_t mlen, uint32_t moff,
-	const uchar **psrc, uchar **pout)
+	const uchar **psrc, uchar **pout, uchar **pputtok)
 {
-    uchar *tok = Out++;
+    uchar *tok = *pputtok;
+    if (unlikely(tok == NULL))
+	tok = Out++;
+    *pputtok = Out++;
     if (likely(llen <= 14)) {
 	*tok = llen << 4;
 	memcpy(Out, Src, 8);
@@ -47,9 +50,12 @@ static inline void putseq(size_t llen, size_t mlen, uint32_t moff,
 }
 
 static inline void putlastseq(size_t llen,
-	const uchar **psrc, uchar **pout)
+	const uchar **psrc, uchar **pout, uchar **pputtok)
 {
-    uchar *tok = Out++;
+    uchar *tok = *pputtok;
+    if (unlikely(tok == NULL))
+	tok = Out++;
+    *pputtok = Out++;
     if (likely(llen <= 14)) {
 	*tok = llen << 4;
 	if (unlikely(llen > 8)) {
