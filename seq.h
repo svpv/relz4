@@ -12,9 +12,6 @@ static inline void putseq(size_t llen, size_t mlen, uint32_t moff,
     if (unlikely(tok == NULL))
 	tok = Out++;
     *pputtok = Out++;
-    assert(moff >= MINOFF && moff <= MINOFF + UINT16_MAX);
-    store16le(Out, moff - MINOFF);
-    Out += 2;
     if (likely(llen <= 14)) {
 	*tok = llen << 4;
 	memcpy(Out, Src, 8);
@@ -35,6 +32,9 @@ static inline void putseq(size_t llen, size_t mlen, uint32_t moff,
 	memcpy(last8out, last8src, 8);
 	Src = last8src + 8, Out = last8out + 8;
     }
+    assert(moff >= MINOFF && moff <= MINOFF + UINT16_MAX);
+    store16le(Out, moff - MINOFF);
+    Out += 2;
     if (likely(mlen <= 19)) {
 	if (unlikely(mlen == 19))
 	    mlen = 18;
@@ -56,8 +56,6 @@ static inline void putlastseq(size_t llen,
     if (unlikely(tok == NULL))
 	tok = Out++;
     *pputtok = Out++;
-    store16le(Out, 0);
-    Out += 2;
     if (likely(llen <= 14)) {
 	*tok = llen << 4;
 	if (unlikely(llen > 8)) {
