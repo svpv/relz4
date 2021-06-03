@@ -80,8 +80,7 @@ L(match):
 	movw %ax,16(r_out)
 	mov e_tok,%eax
 	shr $4,%eax
-	add %r10,r_out
-	add $3,r_out
+	lea 3(r_out,%r10),r_out
 	jmp L(loop)
 
 	.align 16
