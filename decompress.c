@@ -31,12 +31,12 @@ static inline uchar *decompress(const uchar *src, size_t srcSize, uchar *out)
 	size_t moff = load16le(src);
 	llen = tok >> 4;
 	const uchar *ref = out - moff;
-#if MINOFF >= 16
-	memcpy(out + 0, ref - MINOFF + 0, 16);
-#else
-	memcpy(out + 0, ref - MINOFF + 0, 8);
-	memcpy(out + 8, ref - MINOFF + 8, 8);
-#endif
+	if (MINOFF >= 16 || likely(moff >= 16))
+	    memcpy(out + 0, ref - MINOFF + 0, 16);
+	else {
+	    memcpy(out + 0, ref - MINOFF + 0, 8);
+	    memcpy(out + 8, ref - MINOFF + 8, 8);
+	}
 	mlen &= 15;
 	if (likely(mlen != 0)) {
 	    src += 3;
@@ -51,15 +51,16 @@ static inline uchar *decompress(const uchar *src, size_t srcSize, uchar *out)
 	    src += 1;
 	    uchar *outEnd = out + mlen;
 	    do {
-#if MINOFF >= 16
-		memcpy(out +  0, ref - MINOFF +  0, 16);
-		memcpy(out + 16, ref - MINOFF + 16, 16);
-#else
-		memcpy(out +  0, ref - MINOFF +  0, 8);
-		memcpy(out +  8, ref - MINOFF +  8, 8);
-		memcpy(out + 16, ref - MINOFF + 16, 8);
-		memcpy(out + 24, ref - MINOFF + 24, 8);
-#endif
+		if (MINOFF >= 16 || likely(moff >= 16)) {
+		    memcpy(out +  0, ref - MINOFF +  0, 16);
+		    memcpy(out + 16, ref - MINOFF + 16, 16);
+		}
+		else {
+		    memcpy(out +  0, ref - MINOFF +  0, 8);
+		    memcpy(out +  8, ref - MINOFF +  8, 8);
+		    memcpy(out + 16, ref - MINOFF + 16, 8);
+		    memcpy(out + 24, ref - MINOFF + 24, 8);
+		}
 		ref += 32, out += 32;
 	    } while (out < outEnd);
 	    out = outEnd;
