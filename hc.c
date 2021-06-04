@@ -65,7 +65,10 @@ static inline uint32_t HC_find(const struct HC *hc,
 	uint32_t mlen = 4 + HC_count(src + 4, ref + 4, last12);
 	while (src > src0 && ref > hc->base && src[-1] == ref[-1])
 	    src--, ref--, mlen++;
-	if (mlen < bestmlen || (mlen == bestmlen && *pmoff >= 128))
+	if (mlen < bestmlen)
+	    goto next;
+	// a tie: lower start improves compression, offset not too small
+	if (mlen == bestmlen && *pmstart <= src && *pmoff >= 128)
 	    goto next;
 	*pmstart = src;
 	*pmoff = moff;
