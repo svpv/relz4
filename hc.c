@@ -27,10 +27,11 @@ struct HC {
     uint32_t htab[1<<15];
 };
 
-static inline uint32_t HC_hash(uint32_t x)
+static inline uint32_t HC_hash(uint64_t x)
 {
-    x *= 2654435761U;
-    return x >> 17;
+    x *= 889523592379ULL;
+    uint32_t y = x >> 8;
+    return y >> 17;
 }
 
 static inline void HC_update(struct HC *hc, const uchar *src)
@@ -40,7 +41,7 @@ static inline void HC_update(struct HC *hc, const uchar *src)
     hc->nextpos = src - hc->base - (MINOFF-1);
     assert(pos < hc->nextpos);
     do {
-	uint32_t h = HC_hash(load32(hc->base + pos));
+	uint32_t h = HC_hash(load64(hc->base + pos));
 	uint32_t d = pos - hc->htab[h];
 	d = (d > UINT16_MAX) ? UINT16_MAX : d;
 	hc->ctab[(uint16_t)pos] = d;
@@ -55,7 +56,8 @@ static inline uint32_t HC_find(const struct HC *hc,
     uint32_t pos = src1 - hc->base;
     uint32_t pos0 = (pos > UINT16_MAX) ? pos - UINT16_MAX : 0;
     uint32_t src32 = load32(src1);
-    uint32_t mpos = hc->htab[HC_hash(src32)];
+    uint64_t src64 = load64(src1);
+    uint32_t mpos = hc->htab[HC_hash(src64)];
     uint32_t bestmlen = 0;
     while (mpos >= pos0) {
 	const uchar *src = src1;
