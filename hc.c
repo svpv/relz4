@@ -2,6 +2,7 @@
 #include "seq.h"
 
 #define OPTMLEN 18
+#define NICEOFF 64
 
 static inline uint32_t HC_count(const uchar *src,
 	const uchar *ref, const uchar *last12)
@@ -68,7 +69,7 @@ static inline uint32_t HC_find(const struct HC *hc,
 	if (mlen < bestmlen)
 	    goto next;
 	// a tie: lower start improves compression, offset not too small
-	if (mlen == bestmlen && *pmstart <= src && *pmoff >= 128)
+	if (mlen == bestmlen && *pmstart <= src && *pmoff >= NICEOFF)
 	    goto next;
 	*pmstart = src;
 	*pmoff = moff;
