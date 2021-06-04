@@ -1,6 +1,6 @@
 #include "xlen.h"
 
-#define MINOFF 8
+#define MINOFF 16
 
 #define Src (*psrc)
 #define Out (*pout)
