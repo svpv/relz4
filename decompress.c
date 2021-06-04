@@ -1,6 +1,8 @@
 #include "relz4.h"
 #include "xlen.h"
 
+#define MINOFF 8
+
 static inline uchar *decompress(const uchar *src, size_t srcSize, uchar *out)
 {
     const uchar *srcLast5 = src + srcSize - 5;
@@ -29,11 +31,16 @@ static inline uchar *decompress(const uchar *src, size_t srcSize, uchar *out)
 	size_t moff = load16le(src);
 	llen = tok >> 4;
 	const uchar *ref = out - moff;
-	memcpy(out + 0, ref - 16, 16);
+#if MINOFF >= 16
+	memcpy(out + 0, ref - MINOFF + 0, 16);
+#else
+	memcpy(out + 0, ref - MINOFF + 0, 8);
+	memcpy(out + 8, ref - MINOFF + 8, 8);
+#endif
 	mlen &= 15;
 	if (likely(mlen != 0)) {
 	    src += 3;
-	    memcpy(out + 16, ref + 0, 2);
+	    memcpy(out + 16, ref - MINOFF + 16, 2);
 	    mlen += 3;
 	    out += mlen;
 	}
@@ -44,8 +51,15 @@ static inline uchar *decompress(const uchar *src, size_t srcSize, uchar *out)
 	    src += 1;
 	    uchar *outEnd = out + mlen;
 	    do {
-		memcpy(out + 0, ref - 16, 16);
-		memcpy(out + 16, ref + 0, 16);
+#if MINOFF >= 16
+		memcpy(out +  0, ref - MINOFF +  0, 16);
+		memcpy(out + 16, ref - MINOFF + 16, 16);
+#else
+		memcpy(out +  0, ref - MINOFF +  0, 8);
+		memcpy(out +  8, ref - MINOFF +  8, 8);
+		memcpy(out + 16, ref - MINOFF + 16, 8);
+		memcpy(out + 24, ref - MINOFF + 24, 8);
+#endif
 		ref += 32, out += 32;
 	    } while (out < outEnd);
 	    out = outEnd;
