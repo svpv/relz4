@@ -138,18 +138,16 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
 	    goto save1;
 	}
     found2:
+	// deal with the boundary between M and M2
 	if (mstart2 - mstart < OPTMLEN) {
-	    mlen = (mlen > OPTMLEN) ? OPTMLEN : mlen;
-	    if (mstart + mlen > mstart2 + mlen2 - 4)
-		mlen = mstart2 - mstart + mlen2 - 4;
-	    intptr_t correction = mlen - (mstart2 - mstart);
-	    if (correction > 0)
-		mstart2 += correction, mlen2 -= correction;
-	    if (mstart2 < mstart + mlen)
-		mlen = mstart2 - mstart;
+	    uint32_t nlen = (mlen > OPTMLEN) ? OPTMLEN : mlen;
+	    intptr_t d = mstart + nlen - mstart2;
+	    if (d > 0) {
+		mstart2 += d, mlen2 -= d;
+		assert(mlen2 >= 4);
+	    }
+	    // do not curtail M just yet, may have to deal with another M2
 	}
-	if (mstart2 < mstart + mlen)
-	    mlen = mstart2 - mstart;
 	src = mstart2 + mlen2 - 3;
 	mlen3 = 0;
 	if (src <= last12) {
@@ -157,6 +155,8 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
 	    mlen3 = HC_find(&hc, src0, src, last12, &mstart3, &moff3, maxiter);
 	}
 	if (mlen3 <= mlen2) {
+	    if (mstart + mlen > mstart2)
+		mlen = mstart2 - mstart;
 	    putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
 	    putseq(mstart2 - src0, mlen2, moff2, &src0, &out, &puttok);
 	    src = src0;
@@ -181,6 +181,8 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
 	    goto search2;
 	}
 	// write M, M2 becomes M, M3 becomes M2
+	if (mstart + mlen > mstart2)
+	    mlen = mstart2 - mstart;
 	putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
 	mstart = mstart2, moff = moff2, mlen = mlen2;
 	mstart2 = mstart3, moff2 = moff3, mlen2 = mlen3;
