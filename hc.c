@@ -192,7 +192,7 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
     return out;
 }
 
-size_t RELZ4_compress(const void *src, size_t srcSize, void *out)
+size_t RELZ4_compress(const void *src, size_t srcSize, void *out, int level)
 {
-    return HC_compress(src, srcSize, out, 64) - (uchar *) out;
+    return HC_compress(src, srcSize, out, 1 << (level - 1)) - (uchar *) out;
 }
