@@ -58,6 +58,7 @@ static inline uint32_t HC_find(const struct HC *hc,
     uint32_t mpos = hc->htab[HC_hash(src32)];
     uint32_t bestmlen = 0;
     while (mpos >= pos0) {
+	uint32_t d = hc->ctab[(uint16_t)mpos];
 	const uchar *src = src1;
 	const uchar *ref = hc->base + mpos;
 	uint32_t moff = src - ref;
@@ -77,7 +78,6 @@ static inline uint32_t HC_find(const struct HC *hc,
     next:
 	if (--maxiter <= 0)
 	    break;
-	uint32_t d = hc->ctab[(uint16_t)mpos];
 	assert(mpos >= d);
 	mpos -= d;
     }
