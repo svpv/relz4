@@ -59,9 +59,7 @@ static inline uint32_t HT_find(const struct HT *ht,
     uint64_t mpos = ht->mpos[HT_hash(src32)];
     uint32_t bestmlen = 0;
     for (int i = 0; i < 4; i++, mpos >>= 16) {
-	uint16_t moff = pos - mpos;
-	if (moff < MINOFF)
-	    continue;
+	uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
 	const uchar *src = src1;
 	const uchar *ref = src - moff;
 	if (load32(ref) != src32)
