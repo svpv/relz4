@@ -21,9 +21,9 @@ static inline uint32_t HT_count(const uchar *src,
 }
 
 struct HT {
+    uint64_t mpos[1<<14];
     const uchar *base;
     uint32_t nextpos;
-    uint64_t mpos[1<<14];
 };
 
 static inline uint32_t HT_hash(uint32_t x)
