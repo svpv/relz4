@@ -4,7 +4,7 @@
 #define OPTMLEN 18
 #define NICEOFF 64
 
-static inline uint32_t HC_count(const uchar *src,
+static inline uint32_t HT_count(const uchar *src,
 	const uchar *ref, const uchar *last12)
 {
     uint32_t len = 0;
@@ -20,52 +20,52 @@ static inline uint32_t HC_count(const uchar *src,
     return len;
 }
 
-struct HC {
+struct HT {
     const uchar *base;
     uint32_t nextpos;
     uint16_t ctab[1<<16];
     uint32_t htab[1<<15];
 };
 
-static inline uint32_t HC_hash(uint32_t x)
+static inline uint32_t HT_hash(uint32_t x)
 {
     x *= 2654435761U;
     return x >> 17;
 }
 
-static inline void HC_update(struct HC *hc, const uchar *src)
+static inline void HT_update(struct HT *ht, const uchar *src)
 {
-    uint32_t pos = hc->nextpos;
-    assert(src - hc->base > MINOFF-1);
-    hc->nextpos = src - hc->base - (MINOFF-1);
-    assert(pos < hc->nextpos);
+    uint32_t pos = ht->nextpos;
+    assert(src - ht->base > MINOFF-1);
+    ht->nextpos = src - ht->base - (MINOFF-1);
+    assert(pos < ht->nextpos);
     do {
-	uint32_t h = HC_hash(load32(hc->base + pos));
-	uint32_t d = pos - hc->htab[h];
+	uint32_t h = HT_hash(load32(ht->base + pos));
+	uint32_t d = pos - ht->htab[h];
 	d = (d > UINT16_MAX) ? UINT16_MAX : d;
-	hc->ctab[(uint16_t)pos] = d;
-	hc->htab[h] = pos;
-    } while (++pos < hc->nextpos);
+	ht->ctab[(uint16_t)pos] = d;
+	ht->htab[h] = pos;
+    } while (++pos < ht->nextpos);
 }
 
-static inline uint32_t HC_find(const struct HC *hc,
+static inline uint32_t HT_find(const struct HT *ht,
 	const uchar *src0, const uchar *src1, const uchar *last12,
 	const uchar **pmstart, uint32_t *pmoff, int maxiter)
 {
-    uint32_t pos = src1 - hc->base;
+    uint32_t pos = src1 - ht->base;
     uint32_t pos0 = (pos > UINT16_MAX) ? pos - UINT16_MAX : 0;
     uint32_t src32 = load32(src1);
-    uint32_t mpos = hc->htab[HC_hash(src32)];
+    uint32_t mpos = ht->htab[HT_hash(src32)];
     uint32_t bestmlen = 0;
     while (mpos >= pos0) {
-	uint32_t d = hc->ctab[(uint16_t)mpos];
+	uint32_t d = ht->ctab[(uint16_t)mpos];
 	const uchar *src = src1;
-	const uchar *ref = hc->base + mpos;
+	const uchar *ref = ht->base + mpos;
 	uint32_t moff = src - ref;
 	if (load32(ref) != src32)
 	    goto next;
-	uint32_t mlen = 4 + HC_count(src + 4, ref + 4, last12);
-	while (src > src0 && ref > hc->base && src[-1] == ref[-1])
+	uint32_t mlen = 4 + HT_count(src + 4, ref + 4, last12);
+	while (src > src0 && ref > ht->base && src[-1] == ref[-1])
 	    src--, ref--, mlen++;
 	if (mlen < bestmlen)
 	    goto next;
@@ -84,14 +84,14 @@ static inline uint32_t HC_find(const struct HC *hc,
     return bestmlen;
 }
 
-static uchar *HC_compress(const uchar *src, size_t srcSize,
+static uchar *HT_compress(const uchar *src, size_t srcSize,
 	uchar *out, int maxiter)
 {
-    struct HC hc;
-    hc.nextpos = 0;
-    hc.base = src;
-    memset(hc.htab, 0x00, sizeof hc.htab);
-    memset(hc.ctab, 0xff, sizeof hc.ctab);
+    struct HT ht;
+    ht.nextpos = 0;
+    ht.base = src;
+    memset(ht.htab, 0x00, sizeof ht.htab);
+    memset(ht.ctab, 0xff, sizeof ht.ctab);
     const uchar *src0 = src;
     const uchar *srcEnd = src + srcSize;
     const uchar *last12 = srcEnd - 12;
@@ -101,8 +101,8 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
     uint32_t mlen, mlen0, mlen2, mlen3;
     src += MINOFF;
     while (src <= last12) {
-	HC_update(&hc, src);
-	mlen = HC_find(&hc, src0, src, last12, &mstart, &moff, maxiter);
+	HT_update(&ht, src);
+	mlen = HT_find(&ht, src0, src, last12, &mstart, &moff, maxiter);
 	if (mlen == 0) {
 	    src++;
 	    continue;
@@ -113,8 +113,8 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
 	src = mstart + mlen - 2 - (mlen > 4);
 	mlen2 = 0;
 	if (src <= last12) {
-	    HC_update(&hc, src);
-	    mlen2 = HC_find(&hc, src0, src, last12, &mstart2, &moff2, maxiter);
+	    HT_update(&ht, src);
+	    mlen2 = HT_find(&ht, src0, src, last12, &mstart2, &moff2, maxiter);
 	}
 	if (mlen2 <= mlen) {
 	    putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
@@ -152,8 +152,8 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
 	src = mstart2 + mlen2 - 3;
 	mlen3 = 0;
 	if (src <= last12) {
-	    HC_update(&hc, src);
-	    mlen3 = HC_find(&hc, src0, src, last12, &mstart3, &moff3, maxiter);
+	    HT_update(&ht, src);
+	    mlen3 = HT_find(&ht, src0, src, last12, &mstart3, &moff3, maxiter);
 	}
 	if (mlen3 <= mlen2) {
 	    if (mstart + mlen > mstart2)
@@ -195,5 +195,5 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
 
 size_t RELZ4_compress(const void *src, size_t srcSize, void *out, int level)
 {
-    return HC_compress(src, srcSize, out, 1 << (level - 1)) - (uchar *) out;
+    return HT_compress(src, srcSize, out, 1 << (level - 1)) - (uchar *) out;
 }
