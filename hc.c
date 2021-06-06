@@ -16,7 +16,13 @@ static inline uint32_t HC_count(const uchar *src,
 	    return len + (__builtin_ctzll(d) >> 3);
 	src += 8, ref += 8, len += 8;
     }
-    // TOOD
+    const uchar *last5 = last12 + 7;
+    assert(src <= last5);
+    while (src < last5) {
+	if (*src != *ref)
+	    return len;
+	src++, ref++, len++;
+    }
     return len;
 }
 
