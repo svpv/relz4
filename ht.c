@@ -23,13 +23,13 @@ static inline uint32_t HT_count(const uchar *src,
 struct HT {
     const uchar *base;
     uint32_t nextpos;
-    uint64_t mpos[1<<15];
+    uint64_t mpos[1<<14];
 };
 
 static inline uint32_t HT_hash(uint32_t x)
 {
     x *= 2654435761U;
-    return x >> 17;
+    return x >> 18;
 }
 
 static inline void HT_update(struct HT *ht, const uchar *src)
