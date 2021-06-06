@@ -39,6 +39,16 @@ static inline uint32_t HC_hash(uint32_t x)
     return x >> 17;
 }
 
+static inline void HC_update1(struct HC *hc, const uchar *src)
+{
+    uint32_t h = HC_hash(load32(src - MINOFF));
+    uint32_t pos = hc->nextpos++;
+    uint32_t d = pos - hc->htab[h];
+    d = (d > UINT16_MAX) ? UINT16_MAX : d;
+    hc->ctab[(uint16_t)pos] = d;
+    hc->htab[h] = pos;
+}
+
 static inline void HC_update(struct HC *hc, const uchar *src)
 {
     uint32_t pos = hc->nextpos;
@@ -52,6 +62,41 @@ static inline void HC_update(struct HC *hc, const uchar *src)
 	hc->ctab[(uint16_t)pos] = d;
 	hc->htab[h] = pos;
     } while (++pos < hc->nextpos);
+}
+
+static inline uint32_t HC_find0(const struct HC *hc,
+	const uchar *src, const uchar *last12,
+	const uchar **pmstart, uint32_t *pmoff, int maxiter)
+{
+    uint32_t pos = src - hc->base;
+    uint32_t pos0 = (pos > UINT16_MAX) ? pos - UINT16_MAX : 0;
+    uint32_t src32 = load32(src);
+    uint32_t mpos = hc->htab[HC_hash(src32)];
+    uint32_t bestmlen = 3;
+    *pmoff = NICEOFF;
+    while (mpos >= pos0) {
+	uint32_t d = hc->ctab[(uint16_t)mpos];
+	const uchar *ref = hc->base + mpos;
+	if (load32(ref) != src32)
+	    goto next;
+	// probe for a longer match, unless the offset is small
+	uint32_t probe = bestmlen + (*pmoff >= NICEOFF);
+	if (load32(ref + probe - 4) != load32(src + probe - 4))
+	    goto next;
+	uint32_t mlen = (probe > 8) ? 4 : probe;
+	mlen += HC_count(src + mlen, ref + mlen, last12);
+	if (mlen < bestmlen)
+	    goto next;
+	*pmoff = src - ref;
+	bestmlen = mlen;
+    next:
+	if (--maxiter <= 0)
+	    break;
+	assert(mpos >= d);
+	mpos -= d;
+    }
+    *pmstart = src;
+    return bestmlen;
 }
 
 static inline uint32_t HC_find(const struct HC *hc,
@@ -108,10 +153,12 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
     src += MINOFF;
     while (src <= last12) {
 	HC_update(&hc, src);
-	mlen = HC_find(&hc, src0, src, last12, &mstart, &moff, maxiter);
-	if (mlen == 0) {
-	    src++;
-	    continue;
+	mlen = HC_find0(&hc, src, last12, &mstart, &moff, maxiter);
+	while (mlen < 4) {
+	    if (++src > last12)
+		goto outbreak;
+	    HC_update1(&hc, src);
+	    mlen = HC_find(&hc, src0, src, last12, &mstart, &moff, maxiter);
 	}
     save1:
 	mstart0 = mstart, moff0 = moff, mlen0 = mlen;
@@ -195,6 +242,7 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
 	mstart2 = mstart3, moff2 = moff3, mlen2 = mlen3;
 	goto found2;
     }
+outbreak:
     putlastseq(srcEnd - src0, &src0, &out, &puttok);
     return out;
 }
