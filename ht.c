@@ -27,7 +27,7 @@ static inline uint32_t HT_count(const uchar *src,
 }
 
 struct HT {
-    uint16_t mpos[1<<14][5];
+    uint64_t mpos[1<<14];
     const uchar *base;
     uint32_t nextpos;
 };
@@ -46,11 +46,7 @@ static inline void HT_update(struct HT *ht, const uchar *src)
     assert(pos < ht->nextpos);
     do {
 	uint32_t h = HT_hash(load32(ht->base + pos));
-	uint16_t *mpos = ht->mpos[h];
-	uint64_t mpos4;
-	memcpy(&mpos4, mpos, 8);
-	mpos[0] = pos;
-	memcpy(mpos + 1, &mpos4, 8);
+	ht->mpos[h] = ht->mpos[h] << 16 | (uint16_t) pos;
     } while (++pos < ht->nextpos);
 }
 
@@ -60,12 +56,9 @@ static inline uint32_t HT_find(const struct HT *ht,
 {
     uint32_t pos = src1 - ht->base;
     uint32_t src32 = load32(src1);
-    const uint16_t *mpos5 = ht->mpos[HT_hash(src32)];
-    uint32_t mpos = mpos5[0];
-    uint64_t mpos4;
-    memcpy(&mpos4, mpos5 + 1, 8);
+    uint64_t mpos = ht->mpos[HT_hash(src32)];
     uint32_t bestmlen = 0;
-    for (int i = 0; i < 5; i++, mpos = mpos4, mpos4 >>= 16) {
+    for (int i = 0; i < 4; i++, mpos >>= 16) {
 	uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
 	const uchar *src = src1;
 	const uchar *ref = src - moff;
