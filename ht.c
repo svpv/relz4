@@ -84,10 +84,10 @@ static uchar *HT_compress(const uchar *src, size_t srcSize, uchar *out)
     const uchar *src0 = src;
     const uchar *srcEnd = src + srcSize;
     const uchar *last12 = srcEnd - 12;
-    const uchar *mstart, *mstart0, *mstart2, *mstart3;
+    const uchar *mstart, *mstart0, *mstart2;
     uchar *puttok = NULL;
-    uint32_t moff, moff0, moff2, moff3;
-    uint32_t mlen, mlen0, mlen2, mlen3;
+    uint32_t moff, moff0, moff2;
+    uint32_t mlen, mlen0, mlen2;
     src += MINOFF;
     while (src <= last12) {
 	HT_update(&ht, src);
@@ -127,56 +127,20 @@ static uchar *HT_compress(const uchar *src, size_t srcSize, uchar *out)
 	    mstart = mstart2, moff = moff2, mlen = mlen2;
 	    goto save1;
 	}
-    found2:
 	// deal with the boundary between M and M2
 	if (mstart2 - mstart < OPTMLEN) {
-	    uint32_t nlen = (mlen > OPTMLEN) ? OPTMLEN : mlen;
-	    intptr_t d = mstart + nlen - mstart2;
-	    if (d > 0) {
-		mstart2 += d, mlen2 -= d;
-		assert(mlen2 >= 4);
-	    }
-	    // do not curtail M just yet, may have to deal with another M2
-	}
-	src = mstart2 + mlen2 - 3;
-	mlen3 = 0;
-	if (src <= last12) {
-	    HT_update(&ht, src);
-	    mlen3 = HT_find(&ht, src0, src, last12, &mstart3, &moff3);
-	}
-	if (mlen3 <= mlen2) {
-	    if (mstart + mlen > mstart2)
-		mlen = mstart2 - mstart;
-	    putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
-	    putseq(mstart2 - src0, mlen2, moff2, &src0, &out, &puttok);
-	    src = src0;
-	    continue;
-	}
-	// not enouch space for M2 between M and M3? remove M2!
-	if (mstart3 < mstart + mlen + 3) {
-	    // if M and M3 overlap, M2 is useless, M3 becomes M2
-	    if (mstart3 < mstart + mlen) {
-		mstart2 = mstart3, moff2 = moff3, mlen2 = mlen3;
-		goto found2;
-	    }
-	    // write M, M2 becomes M0, M3 becomes M
-	    putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
+	    mlen = (mlen > OPTMLEN) ? OPTMLEN : mlen;
 	    intptr_t d = mstart + mlen - mstart2;
 	    if (d > 0) {
 		mstart2 += d, mlen2 -= d;
 		assert(mlen2 >= 4);
 	    }
-	    mstart0 = mstart2, moff0 = moff2, mlen0 = mlen2;
-	    mstart = mstart3, moff = moff3, mlen = mlen3;
-	    goto search2;
 	}
-	// write M, M2 becomes M, M3 becomes M2
 	if (mstart + mlen > mstart2)
 	    mlen = mstart2 - mstart;
 	putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
 	mstart = mstart2, moff = moff2, mlen = mlen2;
-	mstart2 = mstart3, moff2 = moff3, mlen2 = mlen3;
-	goto found2;
+	goto save1;
     }
     putlastseq(srcEnd - src0, &src0, &out, &puttok);
     return out;
