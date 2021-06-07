@@ -153,7 +153,7 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
     src += MINOFF;
     while (src <= last12) {
 	HC_update(&hc, src);
-	mlen = HC_find0(&hc, src, last12, &mstart, &moff, maxiter);
+	mlen = HC_find0(&hc, src, last12, &mstart, &moff, 2 * maxiter);
 	while (mlen < 4) {
 	    if (++src > last12)
 		goto outbreak;
