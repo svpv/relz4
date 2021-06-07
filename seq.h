@@ -55,7 +55,8 @@ static inline void putlastseq(size_t llen,
     uchar *tok = *pputtok;
     if (unlikely(tok == NULL))
 	tok = Out++;
-    *pputtok = Out++;
+    *Out++ = '\0';
+    *pputtok = NULL;
     if (likely(llen <= 14)) {
 	*tok = llen << 4;
 	if (unlikely(llen > 8)) {
