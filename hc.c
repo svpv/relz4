@@ -114,7 +114,6 @@ static inline uint32_t HC_find(const struct HC *hc,
 	uint32_t d = hc->ctab[(uint16_t)mpos];
 	const uchar *src = src1;
 	const uchar *ref = hc->base + mpos;
-	uint32_t moff = src - ref;
 	if (load32(ref) != src32)
 	    goto next;
 	uint32_t mlen = 4 + HC_count(src + 4, ref + 4, last12);
@@ -131,7 +130,7 @@ static inline uint32_t HC_find(const struct HC *hc,
 	if (mlen == bestmlen && *pmstart <= src && *pmoff >= NICEOFF)
 	    goto next;
 	*pmstart = src;
-	*pmoff = moff;
+	*pmoff = src - ref;
 	bestmlen = mlen;
     next:
 	if (--maxiter <= 0)
