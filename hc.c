@@ -247,7 +247,7 @@ outbreak:
     return out;
 }
 
-size_t RELZ4_compress(const void *src, size_t srcSize, void *out, int level)
+size_t RELZ4_compressHC(const void *src, size_t srcSize, void *out, int level)
 {
     return HC_compress(src, srcSize, out, 1 << (level - 1)) - (uchar *) out;
 }
