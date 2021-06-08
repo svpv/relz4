@@ -85,8 +85,7 @@ static inline uint32_t HC_find0(const struct HC *hc,
 	uint32_t probe = bestmlen + (*pmoff >= NICEOFF);
 	if (load32(ref + probe - 4) != load32(src + probe - 4))
 	    goto next;
-	uint32_t mlen = (probe > 8) ? 4 : probe;
-	mlen += HC_count(src + mlen, ref + mlen, last12);
+	uint32_t mlen = 4 + HC_count(src + 4, ref + 4, last12);
 	if (mlen < bestmlen)
 	    goto next;
 	*pmoff = src - ref;
