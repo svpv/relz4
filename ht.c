@@ -17,14 +17,12 @@ static inline uint32_t HT_count(const uchar *src,
 	src += 8, ref += 8, len += 8;
     }
     const uchar *last5 = last12 + 7;
-    if (src >= last5)
-	len -= src - last5;
-    else
-	do {
-	    if (*src != *ref)
-		break;
-	    src++, ref++, len++;
-	} while (src < last5);
+    assert(src <= last5);
+    while (src < last5) {
+	if (*src != *ref)
+	    return len;
+	src++, ref++, len++;
+    }
     return len;
 }
 
