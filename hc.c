@@ -101,7 +101,7 @@ static inline uint32_t HC_find0(const struct HC *hc,
     return bestmlen;
 }
 
-static inline uint32_t HC_find(const struct HC *hc,
+static inline uint32_t HC_find(const struct HC *hc, uint32_t bestmlen,
 	const uchar *src0, const uchar *src1, const uchar *last12,
 	const uchar **pmstart, uint32_t *pmoff, int maxiter)
 {
@@ -109,13 +109,16 @@ static inline uint32_t HC_find(const struct HC *hc,
     uint32_t pos0 = (pos > UINT16_MAX) ? pos - UINT16_MAX : 0;
     uint32_t src32 = load32(src1);
     uint32_t mpos = hc->htab[HC_hash(src32)];
-    uint32_t bestmlen = 0;
+    uint32_t minprobe = src1 - src0 + 4;
     while (mpos >= pos0) {
 	uint32_t d = hc->ctab[(uint16_t)mpos];
 	const uchar *src = src1;
 	const uchar *ref = hc->base + mpos;
 	if (load32(ref) != src32)
 	    goto next;
+	if (bestmlen > minprobe)
+	    if (load32(ref + bestmlen - minprobe) != load32(src + bestmlen - minprobe))
+		goto next;
 	uint32_t mlen = 4 + HC_count(src + 4, ref + 4, last12);
 	do {
 	    if (ref == hc->base)
@@ -164,7 +167,7 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
 	    if (++src > last12)
 		goto outbreak;
 	    HC_update1(&hc, src);
-	    mlen = HC_find(&hc, src0, src, last12, &mstart, &moff, maxiter);
+	    mlen = HC_find(&hc, 3, src0, src, last12, &mstart, &moff, maxiter);
 	}
     save1:
 	mstart0 = mstart, moff0 = moff, mlen0 = mlen;
@@ -173,7 +176,7 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
 	mlen2 = 0;
 	if (src <= last12) {
 	    HC_update(&hc, src);
-	    mlen2 = HC_find(&hc, src0, src, last12, &mstart2, &moff2, maxiter);
+	    mlen2 = HC_find(&hc, mlen, src0, src, last12, &mstart2, &moff2, maxiter);
 	}
 	if (mlen2 <= mlen) {
 	    putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
@@ -212,7 +215,7 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
 	mlen3 = 0;
 	if (src <= last12) {
 	    HC_update(&hc, src);
-	    mlen3 = HC_find(&hc, src0, src, last12, &mstart3, &moff3, maxiter);
+	    mlen3 = HC_find(&hc, mlen2, src0, src, last12, &mstart3, &moff3, maxiter);
 	}
 	if (mlen3 <= mlen2) {
 	    if (mstart + mlen > mstart2)
