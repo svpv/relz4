@@ -86,7 +86,7 @@ static inline uint32_t HT_find0(const struct HT *ht,
 }
 
 static inline uint32_t HT_find1(const struct HT *ht,
-	const uchar *src1, const uchar *last12,
+	const uchar *src0, const uchar *src1, const uchar *last12,
 	const uchar **pmstart, uint32_t *pmoff)
 {
     uint32_t pos = src1 - ht->base;
@@ -105,8 +105,14 @@ static inline uint32_t HT_find1(const struct HT *ht,
 	if (load32(ref + probe - 4) != load32(src + probe - 4))
 	    continue;
 	uint32_t mlen = 4 + HT_count(src + 4, ref + 4, last12);
-	if (ref > ht->base && src[-1] == ref[-1])
+	if (likely(ref > ht->base) && unlikely(src[-1] == ref[-1])) {
 	    src--, ref--, mlen++;
+	    if (src > src0 && ref > ht->base && src[-1] == ref[-1]) {
+		src--, ref--, mlen++;
+		if (src > src0 && ref > ht->base && src[-1] == ref[-1])
+		    src--, ref--, mlen++;
+	    }
+	}
 	if (mlen < bestmlen)
 	    continue;
 	*pmstart = src;
@@ -166,7 +172,7 @@ static uchar *HT_compress(const uchar *src, size_t srcSize, uchar *out)
 	    if (++src > last12)
 		goto outbreak;
 	    HT_update1(&ht, src);
-	    mlen = HT_find1(&ht, src, last12, &mstart, &moff);
+	    mlen = HT_find1(&ht, src0, src, last12, &mstart, &moff);
 	}
     save1:
 	mstart0 = mstart, moff0 = moff, mlen0 = mlen;
