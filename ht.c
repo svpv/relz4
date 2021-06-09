@@ -32,16 +32,15 @@ struct HT {
     uint32_t nextpos;
 };
 
-static inline uint32_t HT_hash(uint64_t x)
+static inline uint32_t HT_hash(uint32_t x)
 {
-    x *= 889523592379ULL;
-    uint32_t y = x >> 8;
-    return y >> 18;
+    x *= 2654435761U;
+    return x >> 18;
 }
 
 static inline void HT_update1(struct HT *ht, const uchar *src)
 {
-    uint32_t h = HT_hash(load64(src - MINOFF));
+    uint32_t h = HT_hash(load32(src - MINOFF));
     uint32_t pos = ht->nextpos++;
     ht->mpos[h] = ht->mpos[h] << 16 | (uint16_t) pos;
 }
@@ -53,7 +52,7 @@ static inline void HT_update(struct HT *ht, const uchar *src)
     ht->nextpos = src - ht->base - (MINOFF-1);
     assert(pos < ht->nextpos);
     do {
-	uint32_t h = HT_hash(load64(ht->base + pos));
+	uint32_t h = HT_hash(load32(ht->base + pos));
 	ht->mpos[h] = ht->mpos[h] << 16 | (uint16_t) pos;
     } while (++pos < ht->nextpos);
 }
@@ -63,14 +62,14 @@ static inline uint32_t HT_find0(const struct HT *ht,
 	const uchar **pmstart, uint32_t *pmoff)
 {
     uint32_t pos = src - ht->base;
-    uint64_t src64 = load64(src);
-    uint64_t mpos = ht->mpos[HT_hash(src64)];
+    uint32_t src32 = load32(src);
+    uint64_t mpos = ht->mpos[HT_hash(src32)];
     uint32_t bestmlen = 3;
     *pmoff = NICEOFF;
     for (int i = 0; i < 4; i++, mpos >>= 16) {
 	uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
 	const uchar *ref = src - moff;
-	if (load32(ref) != (uint32_t) src64)
+	if (load32(ref) != src32)
 	    continue;
 	// probe for a longer match, unless the offset is small
 	uint32_t probe = bestmlen + (*pmoff >= NICEOFF);
@@ -91,15 +90,15 @@ static inline uint32_t HT_find1(const struct HT *ht,
 	const uchar **pmstart, uint32_t *pmoff)
 {
     uint32_t pos = src1 - ht->base;
-    uint64_t src64 = load64(src1);
-    uint64_t mpos = ht->mpos[HT_hash(src64)];
+    uint32_t src32 = load32(src1);
+    uint64_t mpos = ht->mpos[HT_hash(src32)];
     uint32_t bestmlen = 3;
     *pmoff = NICEOFF;
     for (int i = 0; i < 4; i++, mpos >>= 16) {
 	uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
 	const uchar *src = src1;
 	const uchar *ref = src - moff;
-	if (load32(ref) != (uint32_t) src64)
+	if (load32(ref) != src32)
 	    continue;
 	// probe for a longer match, unless the offset is small
 	uint32_t probe = bestmlen + (*pmoff >= NICEOFF);
@@ -128,14 +127,14 @@ static inline uint32_t HT_find(const struct HT *ht,
 	const uchar **pmstart, uint32_t *pmoff)
 {
     uint32_t pos = src1 - ht->base;
-    uint64_t src64 = load64(src1);
-    uint64_t mpos = ht->mpos[HT_hash(src64)];
+    uint32_t src32 = load32(src1);
+    uint64_t mpos = ht->mpos[HT_hash(src32)];
     uint32_t bestmlen = 0;
     for (int i = 0; i < 4; i++, mpos >>= 16) {
 	uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
 	const uchar *src = src1;
 	const uchar *ref = src - moff;
-	if (load32(ref) != (uint32_t) src64)
+	if (load32(ref) != src32)
 	    continue;
 	uint32_t mlen = 4 + HT_count(src + 4, ref + 4, last12);
 	while (src > src0 && ref > ht->base && src[-1] == ref[-1])
