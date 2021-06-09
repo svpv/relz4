@@ -85,6 +85,37 @@ static inline uint32_t HT_find0(const struct HT *ht,
     return bestmlen;
 }
 
+static inline uint32_t HT_find1(const struct HT *ht,
+	const uchar *src1, const uchar *last12,
+	const uchar **pmstart, uint32_t *pmoff)
+{
+    uint32_t pos = src1 - ht->base;
+    uint32_t src32 = load32(src1);
+    uint64_t mpos = ht->mpos[HT_hash(src32)];
+    uint32_t bestmlen = 3;
+    *pmoff = NICEOFF;
+    for (int i = 0; i < 4; i++, mpos >>= 16) {
+	uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
+	const uchar *src = src1;
+	const uchar *ref = src - moff;
+	if (load32(ref) != src32)
+	    continue;
+	// probe for a longer match, unless the offset is small
+	uint32_t probe = bestmlen + (*pmoff >= NICEOFF);
+	if (load32(ref + probe - 4) != load32(src + probe - 4))
+	    continue;
+	uint32_t mlen = 4 + HT_count(src + 4, ref + 4, last12);
+	if (ref > ht->base && src[-1] == ref[-1])
+	    src--, ref--, mlen++;
+	if (mlen < bestmlen)
+	    continue;
+	*pmstart = src;
+	*pmoff = moff;
+	bestmlen = mlen;
+    }
+    return bestmlen;
+}
+
 static inline uint32_t HT_find(const struct HT *ht,
 	const uchar *src0, const uchar *src1, const uchar *last12,
 	const uchar **pmstart, uint32_t *pmoff)
@@ -135,7 +166,7 @@ static uchar *HT_compress(const uchar *src, size_t srcSize, uchar *out)
 	    if (++src > last12)
 		goto outbreak;
 	    HT_update1(&ht, src);
-	    mlen = HT_find(&ht, src0, src, last12, &mstart, &moff);
+	    mlen = HT_find1(&ht, src, last12, &mstart, &moff);
 	}
     save1:
 	mstart0 = mstart, moff0 = moff, mlen0 = mlen;
