@@ -38,6 +38,13 @@ static inline uint32_t HT_hash(uint32_t x)
     return x >> 18;
 }
 
+static inline void HT_update1(struct HT *ht, const uchar *src)
+{
+    uint32_t h = HT_hash(load32(src - MINOFF));
+    uint32_t pos = ht->nextpos++;
+    ht->mpos[h] = ht->mpos[h] << 16 | (uint16_t) pos;
+}
+
 static inline void HT_update(struct HT *ht, const uchar *src)
 {
     uint32_t pos = ht->nextpos;
@@ -48,6 +55,34 @@ static inline void HT_update(struct HT *ht, const uchar *src)
 	uint32_t h = HT_hash(load32(ht->base + pos));
 	ht->mpos[h] = ht->mpos[h] << 16 | (uint16_t) pos;
     } while (++pos < ht->nextpos);
+}
+
+static inline uint32_t HT_find0(const struct HT *ht,
+	const uchar *src, const uchar *last12,
+	const uchar **pmstart, uint32_t *pmoff)
+{
+    uint32_t pos = src - ht->base;
+    uint32_t src32 = load32(src);
+    uint64_t mpos = ht->mpos[HT_hash(src32)];
+    uint32_t bestmlen = 3;
+    *pmoff = NICEOFF;
+    for (int i = 0; i < 4; i++, mpos >>= 16) {
+	uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
+	const uchar *ref = src - moff;
+	if (load32(ref) != src32)
+	    continue;
+	// probe for a longer match, unless the offset is small
+	uint32_t probe = bestmlen + (*pmoff >= NICEOFF);
+	if (load32(ref + probe - 4) != load32(src + probe - 4))
+	    continue;
+	uint32_t mlen = 4 + HT_count(src + 4, ref + 4, last12);
+	if (mlen < bestmlen)
+	    continue;
+	*pmoff = moff;
+	bestmlen = mlen;
+    }
+    *pmstart = src;
+    return bestmlen;
 }
 
 static inline uint32_t HT_find(const struct HT *ht,
@@ -95,10 +130,12 @@ static uchar *HT_compress(const uchar *src, size_t srcSize, uchar *out)
     src += MINOFF;
     while (src <= last12) {
 	HT_update(&ht, src);
-	mlen = HT_find(&ht, src0, src, last12, &mstart, &moff);
-	if (mlen == 0) {
-	    src++;
-	    continue;
+	mlen = HT_find0(&ht, src, last12, &mstart, &moff);
+	while (mlen < 4) {
+	    if (++src > last12)
+		goto outbreak;
+	    HT_update1(&ht, src);
+	    mlen = HT_find(&ht, src0, src, last12, &mstart, &moff);
 	}
     save1:
 	mstart0 = mstart, moff0 = moff, mlen0 = mlen;
@@ -146,6 +183,7 @@ static uchar *HT_compress(const uchar *src, size_t srcSize, uchar *out)
 	mstart = mstart2, moff = moff2, mlen = mlen2;
 	goto save1;
     }
+outbreak:
     putlastseq(srcEnd - src0, &src0, &out, &puttok);
     return out;
 }
