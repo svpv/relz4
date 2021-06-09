@@ -1,4 +1,3 @@
-#include <emmintrin.h>
 #include "relz4.h"
 #include "seq.h"
 
@@ -28,7 +27,7 @@ static inline uint32_t HT_count(const uchar *src,
 }
 
 struct HT {
-    __m128i mpos[1<<14];
+    uint64_t mpos[1<<14];
     const uchar *base;
     uint32_t nextpos;
 };
@@ -43,10 +42,7 @@ static inline void HT_update1(struct HT *ht, const uchar *src)
 {
     uint32_t h = HT_hash(load32(src - MINOFF));
     uint32_t pos = ht->nextpos++;
-    __m128i x = ht->mpos[h];
-    x = _mm_bslli_si128(x, 2);
-    x = _mm_insert_epi16(x, pos, 0);
-    ht->mpos[h] = x;
+    ht->mpos[h] = ht->mpos[h] << 16 | (uint16_t) pos;
 }
 
 static inline void HT_update(struct HT *ht, const uchar *src)
@@ -57,10 +53,7 @@ static inline void HT_update(struct HT *ht, const uchar *src)
     assert(pos < ht->nextpos);
     do {
 	uint32_t h = HT_hash(load32(ht->base + pos));
-	__m128i x = ht->mpos[h];
-	x = _mm_bslli_si128(x, 2);
-	x = _mm_insert_epi16(x, pos, 0);
-	ht->mpos[h] = x;
+	ht->mpos[h] = ht->mpos[h] << 16 | (uint16_t) pos;
     } while (++pos < ht->nextpos);
 }
 
@@ -70,11 +63,11 @@ static inline uint32_t HT_find0(const struct HT *ht,
 {
     uint32_t pos = src - ht->base;
     uint32_t src32 = load32(src);
-    __m128i mpos = ht->mpos[HT_hash(src32)];
+    uint64_t mpos = ht->mpos[HT_hash(src32)];
     uint32_t bestmlen = 3;
     *pmoff = NICEOFF;
-    for (int i = 0; i < 8; i++, mpos = _mm_bsrli_si128(mpos, 2)) {
-	uint32_t moff = (uint16_t)(pos - _mm_extract_epi16(mpos, 0) - MINOFF) + MINOFF;
+    for (int i = 0; i < 4; i++, mpos >>= 16) {
+	uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
 	const uchar *ref = src - moff;
 	if (load32(ref) != src32)
 	    continue;
@@ -98,11 +91,11 @@ static inline uint32_t HT_find1(const struct HT *ht,
 {
     uint32_t pos = src1 - ht->base;
     uint32_t src32 = load32(src1);
-    __m128i mpos = ht->mpos[HT_hash(src32)];
+    uint64_t mpos = ht->mpos[HT_hash(src32)];
     uint32_t bestmlen = 3;
     *pmoff = NICEOFF;
-    for (int i = 0; i < 8; i++, mpos = _mm_bsrli_si128(mpos, 2)) {
-	uint32_t moff = (uint16_t)(pos - _mm_extract_epi16(mpos, 0) - MINOFF) + MINOFF;
+    for (int i = 0; i < 4; i++, mpos >>= 16) {
+	uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
 	const uchar *src = src1;
 	const uchar *ref = src - moff;
 	if (load32(ref) != src32)
@@ -135,10 +128,10 @@ static inline uint32_t HT_find(const struct HT *ht,
 {
     uint32_t pos = src1 - ht->base;
     uint32_t src32 = load32(src1);
-    __m128i mpos = ht->mpos[HT_hash(src32)];
+    uint64_t mpos = ht->mpos[HT_hash(src32)];
     uint32_t bestmlen = 0;
-    for (int i = 0; i < 8; i++, mpos = _mm_bsrli_si128(mpos, 2)) {
-	uint32_t moff = (uint16_t)(pos - _mm_extract_epi16(mpos, 0) - MINOFF) + MINOFF;
+    for (int i = 0; i < 4; i++, mpos >>= 16) {
+	uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
 	const uchar *src = src1;
 	const uchar *ref = src - moff;
 	if (load32(ref) != src32)
