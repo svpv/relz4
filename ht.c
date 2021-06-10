@@ -200,21 +200,17 @@ static uchar *HT_compress(const uchar *src, size_t srcSize, uchar *out)
 	    mstart = mstart2, moff = moff2, mlen = mlen2;
 	    goto search2;
 	}
-	if (unlikely(mstart2 >= mstart + mlen)) {
-	    putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
-	    mstart = mstart2, moff = moff2, mlen = mlen2;
-	    goto save1;
-	}
-	// deal with the boundary between M and M2
-	if (likely(mstart2 - mstart < OPTMLEN)) {
-	    mlen = (mlen > OPTMLEN) ? OPTMLEN : mlen;
+	// now, do M and M2 still overlap?
+	if (likely(mstart2 < mstart + mlen)) {
+	    // deal with the boundary between M and M2
+	    if (likely(mstart2 - mstart <= OPTMLEN))
+		mlen = (mlen > OPTMLEN) ? OPTMLEN : mlen;
+	    // extending the boundary to the right
 	    intptr_t d = mstart + mlen - mstart2;
-	    assert(d > 0);
+	    assert(d >= 0);
 	    mstart2 += d, mlen2 -= d;
 	    assert(mlen2 >= 4);
 	}
-	else
-	    mlen = mstart2 - mstart;
 	putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
 	mstart = mstart2, moff = moff2, mlen = mlen2;
 	goto save1;
