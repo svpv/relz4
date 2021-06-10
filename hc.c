@@ -168,41 +168,40 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
     search2:
 	src = mstart + mlen - 2 - (mlen > 4);
 	mlen2 = 0;
-	if (src <= last12) {
+	if (likely(src <= last12)) {
 	    HC_update(&hc, src);
 	    mlen2 = HC_find(&hc, src0, src, last12, &mstart2, &moff2, maxiter);
 	}
-	if (mlen2 <= mlen) {
+	if (likely(mlen2 <= mlen)) {
 	    putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
 	    src = src0;
 	    continue;
 	}
-	if (mstart2 <= mstart) {
+	if (unlikely(mstart2 <= mstart)) {
 	    mstart = mstart2, moff = moff2, mlen = mlen2;
-	    if (mstart <= mstart0)
+	    if (likely(mstart <= mstart0))
 		goto save1;
 	    goto search2;
 	}
-	if (mstart0 < mstart && mstart2 < mstart + mlen0)
+	if (unlikely(mstart0 < mstart) && likely(mstart2 < mstart + mlen0))
 	    mstart = mstart0, moff = moff0, mlen = mlen0;
-	if (mstart2 - mstart < 3) {
+	if (likely(mstart2 - mstart < 3)) {
 	    mstart = mstart2, moff = moff2, mlen = mlen2;
 	    goto search2;
 	}
-	if (mstart2 >= mstart + mlen) {
+	if (unlikely(mstart2 >= mstart + mlen)) {
 	    putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
 	    mstart = mstart2, moff = moff2, mlen = mlen2;
 	    goto save1;
 	}
     found2:
 	// deal with the boundary between M and M2
-	if (mstart2 - mstart < OPTMLEN) {
+	if (likely(mstart2 - mstart < OPTMLEN)) {
 	    uint32_t nlen = (mlen > OPTMLEN) ? OPTMLEN : mlen;
 	    intptr_t d = mstart + nlen - mstart2;
-	    if (d > 0) {
-		mstart2 += d, mlen2 -= d;
-		assert(mlen2 >= 4);
-	    }
+	    assert(d > 0);
+	    mstart2 += d, mlen2 -= d;
+	    assert(mlen2 >= 4);
 	    // do not curtail M just yet, may have to deal with another M2
 	}
 	src = mstart2 + mlen2 - 3;
