@@ -177,12 +177,14 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
 	    src = src0;
 	    continue;
 	}
+    found2:
 	if (unlikely(mstart2 <= mstart)) {
 	    mstart = mstart2, moff = moff2, mlen = mlen2;
 	    if (likely(mstart <= mstart0))
 		goto save1;
 	    goto search2;
 	}
+	assert(mstart0 >= src0);
 	if (unlikely(mstart0 < mstart) && likely(mstart2 < mstart + mlen0))
 	    mstart = mstart0, moff = moff0, mlen = mlen0;
 	if (likely(mstart2 - mstart < 3)) {
@@ -194,7 +196,7 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
 	    mstart = mstart2, moff = moff2, mlen = mlen2;
 	    goto save1;
 	}
-    found2:
+    have12:
 	// deal with the boundary between M and M2
 	if (likely(mstart2 - mstart < OPTMLEN)) {
 	    uint32_t nlen = (mlen > OPTMLEN) ? OPTMLEN : mlen;
@@ -204,6 +206,7 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
 	    assert(mlen2 >= 4);
 	    // do not curtail M just yet, may have to deal with another M2
 	}
+    search3:
 	src = mstart2 + mlen2 - 3;
 	mlen3 = 0;
 	if (src <= last12) {
@@ -218,13 +221,18 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
 	    src = src0;
 	    continue;
 	}
-	// not enouch space for M2 between M and M3? remove M2!
-	if (mstart3 < mstart + mlen + 3) {
-	    // if M and M3 overlap, M2 is useless, M3 becomes M2
-	    if (mstart3 < mstart + mlen) {
-		mstart2 = mstart3, moff2 = moff3, mlen2 = mlen3;
+	// if M and M3 overlap or adjacent, M2 is useless, M3 becomes M2
+	if (mstart3 <= mstart + mlen) {
+	    moff2 = moff3, mlen2 = mlen3;
+	    if (mstart3 < mstart2) {
+		mstart2 = mstart3;
 		goto found2;
 	    }
+	    mstart2 = mstart3;
+	    goto search3;
+	}
+	// not enough space for M2 between M and M3? remove M2!
+	if (mstart3 < mstart + mlen + 3) {
 	    // write M, M2 becomes M0, M3 becomes M
 	    putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
 	    intptr_t d = mstart + mlen - mstart2;
@@ -241,8 +249,9 @@ static uchar *HC_compress(const uchar *src, size_t srcSize,
 	    mlen = mstart2 - mstart;
 	putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
 	mstart = mstart2, moff = moff2, mlen = mlen2;
+	mstart0 = mstart, moff0 = moff, mlen0 = mlen;
 	mstart2 = mstart3, moff2 = moff3, mlen2 = mlen3;
-	goto found2;
+	goto have12;
     }
 outbreak:
     putlastseq(srcEnd - src0, &src0, &out, &puttok);
