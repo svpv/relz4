@@ -174,10 +174,11 @@ static uchar *HT_compress(const uchar *src, size_t srcSize, uchar *out)
 	    HT_update1(&ht, src);
 	    mlen = HT_find1(&ht, src0, src, last12, &mstart, &moff);
 	}
-    save1:
+	// stash the match with the lowest start
 	mstart0 = mstart, moff0 = moff, mlen0 = mlen;
-    search2:
+	// search for a longer overlapping match
 	src = mstart + mlen - 2 - (mlen > 4);
+    search2:
 	mlen2 = 0;
 	if (likely(src <= last12)) {
 	    HT_update(&ht, src);
@@ -191,13 +192,15 @@ static uchar *HT_compress(const uchar *src, size_t srcSize, uchar *out)
 	if (unlikely(mstart2 <= mstart)) {
 	    mstart = mstart2, moff = moff2, mlen = mlen2;
 	    if (likely(mstart <= mstart0))
-		goto save1;
+		mstart0 = mstart, moff0 = moff, mlen0 = mlen;
+	    src = mstart + mlen - 3;
 	    goto search2;
 	}
 	if (unlikely(mstart0 < mstart) && likely(mstart2 < mstart + mlen0))
 	    mstart = mstart0, moff = moff0, mlen = mlen0;
 	if (likely(mstart2 - mstart < 3)) {
 	    mstart = mstart2, moff = moff2, mlen = mlen2;
+	    src = mstart + mlen - 3;
 	    goto search2;
 	}
 	// now, do M and M2 still overlap?
@@ -220,7 +223,9 @@ static uchar *HT_compress(const uchar *src, size_t srcSize, uchar *out)
 	}
 	putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
 	mstart = mstart2, moff = moff2, mlen = mlen2;
-	goto save1;
+	mstart0 = mstart, moff0 = moff, mlen0 = mlen;
+	src = mstart + mlen - 3;
+	goto search2;
     }
 outbreak:
     putlastseq(srcEnd - src0, &src0, &out, &puttok);
