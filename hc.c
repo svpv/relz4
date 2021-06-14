@@ -1,7 +1,6 @@
 #include "relz4.h"
 #include "seq.h"
 
-#define OPTMLEN 18
 #define NICEOFF 64
 
 static inline uint32_t HC_count(const uchar *src,
