@@ -197,7 +197,8 @@ static uchar *HT_compress(const uchar *src, size_t srcSize, uchar *out)
 	}
 	if (unlikely(mstart0 < mstart) && likely(mstart2 < mstart + mlen0))
 	    mstart = mstart0, moff = moff0, mlen = mlen0;
-	if (likely(mstart2 - mstart < 4)) {
+	if (likely(mstart2 - mstart < 3) || (mstart2 - mstart == 3 &&
+		    !(mstart - src0 <= OPTLLEN && mstart2 - src0 > OPTLLEN))) {
 	    mstart = mstart2, moff = moff2, mlen = mlen2;
 	    src = mstart + mlen - 3;
 	    goto search2;
