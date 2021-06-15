@@ -159,10 +159,10 @@ static uchar *HT_compress(const uchar *src, size_t srcSize, uchar *out)
     const uchar *src0 = src;
     const uchar *srcEnd = src + srcSize;
     const uchar *last12 = srcEnd - 12;
-    const uchar *mstart, *mstart0, *mstart2;
+    const uchar *mstart, *mstart0, *mstart2, *ostart2;
     uchar *puttok = NULL;
     uint32_t moff, moff0, moff2;
-    uint32_t mlen, mlen0, mlen2;
+    uint32_t mlen, mlen0, mlen2, olen2;
     src += MINOFF;
     while (src <= last12) {
 	HT_update(&ht, src);
@@ -197,13 +197,12 @@ static uchar *HT_compress(const uchar *src, size_t srcSize, uchar *out)
 	}
 	if (unlikely(mstart0 < mstart) && likely(mstart2 < mstart + mlen0))
 	    mstart = mstart0, moff = moff0, mlen = mlen0;
-	if (likely(mstart2 - mstart < 3) ||
-		(mstart2 - mstart == 3 && mlen2 <= OPTMLEN &&
-		    !(mstart - src0 <= OPTLLEN && mstart2 - src0 > OPTLLEN))) {
+	if (likely(mstart2 - mstart < 3)) {
 	    mstart = mstart2, moff = moff2, mlen = mlen2;
 	    src = mstart + mlen - 3;
 	    goto search2;
 	}
+	ostart2 = mstart2, olen2 = mlen2;
 	// now, do M and M2 still overlap?
 	if (likely(mstart2 < mstart + mlen)) {
 	    // deal with the boundary between M and M2
@@ -221,6 +220,13 @@ static uchar *HT_compress(const uchar *src, size_t srcSize, uchar *out)
 		mlen = OPTMLEN + 1;
 	    else // extend long matches as well
 		goto extend1;
+	}
+	if (ostart2 - mstart == 3 &&
+		!(olen2 > OPTMLEN && mlen2 <= OPTMLEN) &&
+		!(mstart - src0 <= OPTLLEN && ostart2 - src0 > OPTLLEN)) {
+	    mstart = ostart2, moff = moff2, mlen = olen2;
+	    src = mstart + mlen - 3;
+	    goto search2;
 	}
 	putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
 	mstart = mstart2, moff = moff2, mlen = mlen2;
