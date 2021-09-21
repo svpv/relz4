@@ -33,7 +33,7 @@ struct HT {
 
 static inline uint32_t HT_hash(uint32_t x)
 {
-    x *= 2654435761U;
+    x *= 2246822519U;
     return x >> 18;
 }
 
