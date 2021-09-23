@@ -68,14 +68,14 @@ static inline uint32_t HT_find0(const struct HT *ht,
     for (int i = 0; i < 4; i++, mpos >>= 16) {
 	uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
 	const uchar *ref = src - moff;
-	if (load32(ref) != src32)
-	    continue;
 	// probe for a longer match, unless the offset is small
 	uint32_t probe = bestmlen + (*pmoff >= NICEOFF);
 	if (load32(ref + probe - 4) != load32(src + probe - 4))
 	    continue;
+	if (unlikely(load32(ref) != src32))
+	    continue;
 	uint32_t mlen = 4 + HT_count(src + 4, ref + 4, last12);
-	if (mlen < bestmlen)
+	if (unlikely(mlen < bestmlen))
 	    continue;
 	*pmoff = moff;
 	bestmlen = mlen;
@@ -97,11 +97,11 @@ static inline uint32_t HT_find1(const struct HT *ht,
 	uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
 	const uchar *src = src1;
 	const uchar *ref = src - moff;
-	if (load32(ref) != src32)
-	    continue;
 	// probe for a longer match, unless the offset is small
 	uint32_t probe = bestmlen + (*pmoff >= NICEOFF);
 	if (load32(ref + probe - 4) != load32(src + probe - 4))
+	    continue;
+	if (unlikely(load32(ref) != src32))
 	    continue;
 	uint32_t mlen = 4 + HT_count(src + 4, ref + 4, last12);
 	if (likely(ref > ht->base) && unlikely(src[-1] == ref[-1])) {
@@ -112,7 +112,7 @@ static inline uint32_t HT_find1(const struct HT *ht,
 		    src--, ref--, mlen++;
 	    }
 	}
-	if (mlen < bestmlen)
+	if (unlikely(mlen < bestmlen))
 	    continue;
 	*pmstart = src;
 	*pmoff = moff;

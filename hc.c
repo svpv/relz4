@@ -76,14 +76,14 @@ static inline uint32_t HC_find0(const struct HC *hc,
     while (mpos >= pos0) {
 	uint32_t d = hc->ctab[(uint16_t)mpos];
 	const uchar *ref = hc->base + mpos;
-	if (load32(ref) != src32)
-	    goto next;
 	// probe for a longer match, unless the offset is small
 	uint32_t probe = bestmlen + (*pmoff >= NICEOFF);
 	if (load32(ref + probe - 4) != load32(src + probe - 4))
 	    goto next;
+	if (unlikely(load32(ref) != src32))
+	    goto next;
 	uint32_t mlen = 4 + HC_count(src + 4, ref + 4, last12);
-	if (mlen < bestmlen)
+	if (unlikely(mlen < bestmlen))
 	    goto next;
 	*pmoff = src - ref;
 	bestmlen = mlen;
