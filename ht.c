@@ -65,15 +65,24 @@ static inline uint32_t HT_find0(const struct HT *ht,
     uint64_t mpos = ht->mpos[HT_hash(src32)];
     uint32_t bestmlen = 3;
     *pmoff = NICEOFF;
-    for (int i = 0; i < 4; i++, mpos >>= 16) {
-	uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
-	const uchar *ref = src - moff;
+    int iter = 4;
+    uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
+    const uchar *ref = src - moff;
+    if (load32(ref) == src32)
+	goto count;
+    while (1) {
+	mpos >>= 16;
+	if (--iter == 0)
+	    break;
+	moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
+	ref = src - moff;
 	// probe for a longer match, unless the offset is small
 	uint32_t probe = bestmlen + (*pmoff >= NICEOFF);
 	if (load32(ref + probe - 4) != load32(src + probe - 4))
 	    continue;
 	if (unlikely(load32(ref) != src32))
 	    continue;
+    count:;
 	uint32_t mlen = 4 + HT_count(src + 4, ref + 4, last12);
 	if (unlikely(mlen < bestmlen))
 	    continue;
