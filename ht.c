@@ -136,20 +136,42 @@ static inline uint32_t HT_find(const struct HT *ht, uint32_t bestmlen,
 {
     uint32_t pos = src1 - ht->base;
     uint32_t src32 = load32(src1);
+    uint32_t prev32 = load32(src1 - 1);
     uint64_t mpos = ht->mpos[HT_hash(src32)];
+    *pmoff = NICEOFF;
+    *pmstart = src1;
     for (int i = 0; i < 4; i++, mpos >>= 16) {
 	uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
 	const uchar *src = src1;
 	const uchar *ref = src - moff;
-	if (load32(ref) != src32)
-	    continue;
-	uint32_t mlen = 4 + HT_count(src + 4, ref + 4, last12);
-	while (src > src0 && ref > ht->base && src[-1] == ref[-1])
-	    src--, ref--, mlen++;
-	if (mlen < bestmlen)
-	    continue;
-	// a tie: lower start improves compression, offset not too small
-	if (mlen == bestmlen && *pmstart <= src && *pmoff >= NICEOFF)
+	uint32_t mlen;
+	// Can the match be extended backward?
+	if (likely(ref > ht->base) && load32(ref - 1) == prev32) {
+	    // The 4-byte segment must sill match, otherwise we get
+	    // an asertion failure in HC_update.
+	    if (unlikely(load32(ref) != src32))
+		continue;
+	    src--, ref--;
+	    mlen = 5;
+	    while (src > src0 && ref > ht->base && src[-1] == ref[-1])
+		src--, ref--, mlen++;
+	    // probe for a longer match, unless the offset is small,
+	    // or unless we've descended to a smaller start
+	    uint32_t probe = bestmlen + (*pmoff >= NICEOFF && src >= *pmstart);
+	    if (load32(ref + probe - 4) != load32(src + probe - 4))
+		continue;
+	}
+	else {
+	    // probe for a longer match, unless the offset is small
+	    uint32_t probe = bestmlen + (*pmoff >= NICEOFF);
+	    if (load32(ref + probe - 4) != load32(src + probe - 4))
+		continue;
+	    if (unlikely(load32(ref) != src32))
+		continue;
+	    mlen = 4;
+	}
+	mlen += HT_count(src + mlen, ref + mlen, last12);
+	if (unlikely(mlen < bestmlen))
 	    continue;
 	*pmstart = src;
 	*pmoff = moff;
