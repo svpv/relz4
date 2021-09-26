@@ -130,14 +130,13 @@ static inline uint32_t HT_find1(const struct HT *ht,
     return bestmlen;
 }
 
-static inline uint32_t HT_find(const struct HT *ht,
+static inline uint32_t HT_find(const struct HT *ht, uint32_t bestmlen,
 	const uchar *src0, const uchar *src1, const uchar *last12,
 	const uchar **pmstart, uint32_t *pmoff)
 {
     uint32_t pos = src1 - ht->base;
     uint32_t src32 = load32(src1);
     uint64_t mpos = ht->mpos[HT_hash(src32)];
-    uint32_t bestmlen = 0;
     for (int i = 0; i < 4; i++, mpos >>= 16) {
 	uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
 	const uchar *src = src1;
@@ -190,7 +189,7 @@ static uchar *HT_compress(const uchar *src, size_t srcSize, uchar *out)
 	mlen2 = 0;
 	if (likely(src <= last12)) {
 	    HT_update(&ht, src);
-	    mlen2 = HT_find(&ht, src0, src, last12, &mstart2, &moff2);
+	    mlen2 = HT_find(&ht, mlen, src0, src, last12, &mstart2, &moff2);
 	}
 	if (likely(mlen2 <= mlen)) {
 	    putseq(mstart - src0, mlen, moff, &src0, &out, &puttok);
