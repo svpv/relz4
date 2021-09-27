@@ -139,7 +139,7 @@ static inline uint32_t HT_find(const struct HT *ht, uint32_t bestmlen,
     uint32_t prev32 = load32(src1 - 1);
     uint64_t mpos = ht->mpos[HT_hash(src32)];
     *pmoff = NICEOFF;
-    *pmstart = src1;
+    *pmstart = src0;
     for (int i = 0; i < 4; i++, mpos >>= 16) {
 	uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
 	const uchar *src = src1;
