@@ -104,11 +104,27 @@ static inline uint32_t HT_find1(const struct HT *ht,
     uint32_t bestmlen = 3;
     *pmoff = NICEOFF;
     *pmstart = src0;
-    for (int i = 0; i < 4; i++, mpos >>= 16) {
-	uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
-	const uchar *src = src1;
-	const uchar *ref = src - moff;
-	uint32_t mlen;
+    int iter = 4;
+    uint32_t moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
+    const uchar *src = src1;
+    const uchar *ref = src - moff;
+    uint32_t mlen = 4;
+    if (load32(ref) == src32) {
+	if (likely(ref > ht->base) && load32(ref - 1) == prev32) {
+	    src--, ref--;
+	    mlen = 5;
+	    while (src > src0 && ref > ht->base && src[-1] == ref[-1])
+		src--, ref--, mlen++;
+	}
+	goto count;
+    }
+    while (1) {
+	mpos >>= 16;
+	if (--iter == 0)
+	    break;
+	moff = (uint16_t)(pos - mpos - MINOFF) + MINOFF;
+	src = src1;
+	ref = src - moff;
 	// Can the match be extended backward?
 	if (likely(ref > ht->base) && load32(ref - 1) == prev32) {
 	    // The 4-byte segment must sill match, otherwise we get
@@ -134,6 +150,7 @@ static inline uint32_t HT_find1(const struct HT *ht,
 		continue;
 	    mlen = 4;
 	}
+    count:
 	mlen += HT_count(src + mlen, ref + mlen, last12);
 	if (unlikely(mlen < bestmlen))
 	    continue;
