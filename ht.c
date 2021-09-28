@@ -110,7 +110,7 @@ static inline uint32_t HT_find1(const struct HT *ht,
     const uchar *ref = src - moff;
     uint32_t mlen = 4;
     if (load32(ref) == src32) {
-	if (likely(ref > ht->base) && load32(ref - 1) == prev32) {
+	if (likely(ref > ht->base) && unlikely(load32(ref - 1) == prev32)) {
 	    src--, ref--;
 	    mlen = 5;
 	    while (src > src0 && ref > ht->base && src[-1] == ref[-1])
@@ -126,7 +126,7 @@ static inline uint32_t HT_find1(const struct HT *ht,
 	src = src1;
 	ref = src - moff;
 	// Can the match be extended backward?
-	if (likely(ref > ht->base) && load32(ref - 1) == prev32) {
+	if (likely(ref > ht->base) && unlikely(load32(ref - 1) == prev32)) {
 	    // The 4-byte segment must sill match, otherwise we get
 	    // an asertion failure in HC_update.
 	    if (unlikely(load32(ref) != src32))
