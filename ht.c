@@ -109,15 +109,17 @@ static inline uint32_t HT_find1(const struct HT *ht,
     const uchar *src = src1;
     const uchar *ref = src - moff;
     uint32_t mlen = 4;
-    if (load32(ref) == src32) {
-	if (likely(ref > ht->base) && unlikely(load32(ref - 1) == prev32)) {
+    if (likely(ref > ht->base) && unlikely(load32(ref - 1) == prev32)) {
+	if (likely(load32(ref) == src32)) {
 	    src--, ref--;
 	    mlen = 5;
 	    while (src > src0 && ref > ht->base && src[-1] == ref[-1])
 		src--, ref--, mlen++;
+	    goto count;
 	}
-	goto count;
     }
+    else if (load32(ref) == src32)
+	goto count;
     while (1) {
 	mpos >>= 16;
 	if (--iter == 0)
