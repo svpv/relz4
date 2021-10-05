@@ -218,7 +218,8 @@ static uchar *HT_compress(const uchar *src, size_t srcSize, uchar *out)
 	src = mstart + mlen - 2 - (mlen > 4);
     search2:
 	mlen2 = 0;
-	if (likely(src <= last12)) {
+	// can we find a match of a length at least mlen+1?
+	if (likely(last12 - src >= (ptrdiff_t) mlen + 1 - 7)) {
 	    HT_update(&ht, src);
 	    mlen2 = HT_find2(&ht, mlen, src0, src, last12, &mstart2, &moff2);
 	}
